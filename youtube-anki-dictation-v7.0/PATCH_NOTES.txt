@@ -1,0 +1,10 @@
+v9.3 -> v9.4 Netflix responsive video-fit stability fix
+
+- Netflix only; YouTube behavior unchanged.
+- Removed the cached video base rectangle that became stale after Chrome window resizing.
+- Recalculate from video.offsetWidth/offsetHeight on every layout pass (pre-transform dimensions).
+- Use the transcript panel actual left edge as the available movie width, so the movie expands to the maximum available width.
+- Added staged resize settling (RAF + 70/160/320/650ms) because Chrome/Netflix relayouts the viewport/player/video in multiple steps.
+- Added ResizeObserver for the Netflix video and transcript panel plus visualViewport resize handling.
+- Keeps the v9.3 left/top movie alignment and native-subtitle horizontal centering.
+- This also lays the groundwork for a future drag-resizable transcript panel: changing panel width will automatically trigger video re-fit.

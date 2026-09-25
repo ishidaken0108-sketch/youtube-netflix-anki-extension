@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Video → Anki Dictation 設定</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="options">
+  <main>
+    <h1>Video → Anki Dictation 設定</h1>
+    <div id="buildInfoStatus" class="message">実行中バージョンを確認中…</div>
+    <p class="message">新しく読み込んだ後は、すでに開いていたYouTube/Netflixタブを1回再読み込みしてください。</p>
+
+    <section>
+      <h2>Anki</h2>
+      <label>AnkiConnect URL<input id="ankiUrl" value="http://127.0.0.1:8765"></label>
+      <button id="refreshAnki" class="primary">Ankiに接続して一覧を取得</button>
+      <div id="ankiStatus" class="message"></div>
+      <label>デッキ<select id="deckName"></select></label>
+      <label>ノートタイプ<select id="modelName"></select></label>
+      <label>本文フィールド<select id="contentField"></select></label>
+      <label>音声フィールド<select id="audioField"></select></label>
+      <p>本文と音声を同じフィールドにしたい場合は、上の2項目で同じフィールドを選択してください。</p>
+      <p><strong>日本語訳・単語/熟語の保存先：<code>Mnemonics</code>（固定）</strong></p>
+      <p>自動翻訳を有効にする場合、選択したノートタイプに <code>Mnemonics</code> フィールドが必要です。</p>
+      <label>出典フィールド（任意）<select id="sourceField"><option value="">使用しない</option></select></label>
+    </section>
+
+    <section>
+      <h2>Gemini API（Anki保存時のみ）</h2>
+      <label>Gemini APIキー<input id="geminiApiKey" type="password" autocomplete="off" placeholder="Google AI Studioで発行したAPIキー"></label>
+      <label class="check"><input id="aiProofreadEnabled" type="checkbox"> Ankiカードを作成する直前だけGeminiで字幕を最終校閲する</label>
+      <p>字幕校閲は <code>gemini-3.5-flash-lite</code> を使用します。選択字幕・前後字幕・動画URL・タイトル・チャンネル・説明欄を使って、ASR誤認識、固有名詞、誤重複、噛み・false startなどを校閲します。実際に話した文法やスラングは添削しません。</p>
+      <label class="check"><input id="translationEnabled" type="checkbox"> 校閲後の英文から日本語訳＋単語・熟語を生成しMnemonicsへ追加する</label>
+      <p>日本語訳・単語/熟語抽出は <code>gemini-3.1-flash-lite</code> を使用します。校閲後の確定英文をTARGETとして、動画タイトル・チャンネル・説明欄・前後字幕を文脈に使います。前後字幕は抽出対象にはしません。</p>
+      <label>日本語訳・単語/熟語のGemini指令（編集可）
+        <textarea id="geminiStudyNoteInstruction" rows="15" spellcheck="false" style="width:100%;box-sizing:border-box;font-family:ui-monospace,SFMono-Regular,Consolas,monospace"></textarea>
+      </label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px">
+        <button id="resetGeminiStudyNoteInstruction" type="button">語彙抽出指令を初期値に戻す</button>
+      </div>
+      <p>ここは<strong>語彙の細かさ・難易度・分割方法</strong>を自由に調整する欄です。JSON形式やTARGET限定など、カード生成を壊さないための最低限の指令は拡張側で固定しています。初期値では、たとえば <code>have to be selfish</code> を1項目にまとめず、<code>have to be</code> と <code>selfish</code> に分けるなど、応用しやすい単位へ細分化します。</p>
+      <p><strong>Gemini APIキーは1つだけで、校閲と翻訳の2モデルを使い分けます。</strong> それぞれ別モデルへのAPIリクエストになるため、モデルごとのレート制限が適用されます。</p>
+      <p><strong>辞書の候補はGeminiへ一切渡しません。</strong> HOLO標準辞書やユーザー辞書をヒント・保護語として送らず、動画文脈だけで判断させます。</p>
+      <p>APIキーはこのPCのChromeローカルストレージに保存し、Chrome同期には保存しません。個人利用向けの構成です。拡張機能へAPIキーを直接埋め込んで配布しないでください。</p>
+      <p>校閲が失敗した場合は元字幕のまま保存します。日本語訳・語彙抽出が失敗した場合もカード作成は続行し、Mnemonicsだけ空欄になります。</p>
+    </section>
+
+
+    <section>
+      <h2>Gemini デバッグログ</h2>
+      <p>直近30件のGemini処理ログ（校閲・翻訳）を保存します。<strong>APIキーは保存しません。</strong> Geminiへ実際に送った動画タイトル・チャンネル・説明欄・前後字幕、Geminiの生JSON、固有名詞判定、辞書登録結果を確認できます。</p>
+      <label>ログ
+        <select id="geminiDebugLogSelect"><option>ログなし</option></select>
+      </label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+        <button id="refreshGeminiDebugLog" type="button">ログ更新</button>
+        <button id="copyGeminiDebugLog" type="button">表示中ログをコピー</button>
+        <button id="clearGeminiDebugLog" type="button">ログを消去</button>
+      </div>
+      <pre id="geminiDebugLogView" style="white-space:pre-wrap;overflow:auto;max-height:520px;border:1px solid #ccc;border-radius:8px;padding:12px;background:#f7f7f7">読み込み中…</pre>
+      <div id="geminiDebugStatus" class="message"></div>
+    </section>
+
+    <section>
+      <h2>字幕校閲辞書</h2>
+      <p>字幕表示時は <strong>ユーザー辞書 → HOLO標準辞書</strong> の既知修正だけを即時補正します。字幕を開いた時点ではGeminiによる抽出・校閲は行いません。</p>
+      <label class="check"><input id="hololiveDictionaryEnabled" type="checkbox"> HOLO標準辞書を使用する</label>
+      <label>HOLO標準辞書
+        <textarea id="hololiveDictionary" rows="18" spellcheck="false" style="font-family:Consolas,monospace;line-height:1.45;resize:vertical"></textarea>
+      </label>
+      <button id="resetHololiveDictionary" type="button">初期HOLO標準辞書に戻す</button>
+      <p><code>正しい表記 = 認識揺れ1, 認識揺れ2</code> の形式です。たとえば <code>Riona = lyona</code> や <code>FLOW GLOW = flo glee</code> のような安全な綴り揺れは直接補正します。一般英単語と衝突しやすい候補は自動置換しません。Geminiへ辞書候補を渡すこともありません。</p>
+
+      <h3 style="margin-top:22px">ユーザー辞書</h3>
+      <p>字幕パネルの「字幕修正」でユーザーが明示的に直した対応はここへ登録します。<strong>途中の表示結果ではなく、YouTubeの元字幕 → 最終表記を1対1で保存</strong>します。たとえば <code>Flo Glee → FLOW GLOW → FLOWGLOW</code> と直した場合は <code>Flo Glee → FLOWGLOW</code>、<code>bi boo → Bijou</code> のように語数が変わる場合も前後の一致語をアンカーにして元字幕の正しい範囲を保存します。また、Anki保存前のGemini校閲で<strong>高確信度の固有名詞を修正した場合だけ</strong>自動登録し、対応は必ず<strong>元のSOURCE TEXT → 最終校閲文</strong>から直接作ります。Geminiの途中候補や人工的な小文字aliasからfromを生成しません。一般語の聞き間違い、誤重複、噛み、false startは辞書には登録しません。</p>
+      <div id="userLearnedDictionaryList" style="display:grid;gap:6px"></div>
+      <div id="dictionaryStatus" class="message"></div>
+    </section>
+
+    <section>
+      <h2>切り出し</h2>
+      <label class="check"><input id="audioAlignToSentence" type="checkbox"> 音声も採用した字幕文の時刻に合わせる</label>
+      <label>文頭側の音声調整（秒）<input id="audioPrePadding" type="number" min="-8" max="8" step="0.5"></label>
+      <label>文末側の音声調整（秒）<input id="audioPostPadding" type="number" min="-8" max="8" step="0.5"></label>
+      <label>文章連動音声の最大長（秒）<input id="audioMaxAlignedSeconds" type="number" min="8" max="35" step="1"></label>
+      <p>自動選択時は正の値で音声を外側へ広げ、負の値で内側へ縮めます。<strong>字幕パネルで開始単語・終了単語を手動選択した場合は、このpaddingや最大長ではなく、画面に表示されたYouTube動画タイムコードの開始～終了をそのまま音声区間として切り出します。</strong> 保存ボタンを押すまで待っても区間は変わりません。</p>
+      <label>字幕時刻を取れない時の直前音声（秒）<input id="audioSeconds" type="number" min="2" max="30" step="1"></label>
+      <label>候補にする直前字幕の範囲（秒）<input id="captionSeconds" type="number" min="2" max="20" step="1"></label>
+      <label>字幕タイムコードをボタン時刻より何秒前にずらす<input id="captionTimingAdjustment" type="number" min="0" max="10" step="0.25"></label>
+      <p>通常は <code>0</code> のままでOKです。現在はYouTube字幕トラック自身のタイムコードを使います。動画側の字幕時刻そのものがずれている場合だけ補正してください。</p>
+      <label>本文にする文の最小単語数<input id="minSentenceWords" type="number" min="1" max="20" step="1"></label>
+      <p>初期値は3です。「Yes.」「Oh.」など短すぎる字幕単位は候補から除外します。</p>
+      <label class="check"><input id="autoEnableCaptions" type="checkbox"> YouTube字幕を録音中だけ自動でONにする</label>
+      <label class="check"><input id="hideCaptions" type="checkbox"> 録音中のYouTube字幕を透明にする（リスニング中に答えを見ない）</label>
+    </section>
+
+    <section>
+      <h2>作成されるカード</h2>
+      <pre>本文＋音声（同じフィールド）:
+[sound:...wav]
+
+{{c1::I}} {{c1::want}} {{c1::to}} {{c1::play}}.
+
+答え: 私は遊びたいです。</pre>
+      <p>右側の字幕一覧から開始単語・終了単語を選び、その範囲をAnki化します。字幕表示時は既知辞書だけを適用し、Geminiは動きません。Anki保存時だけ選択した短文をGemini 3.5 Flash-Liteで確認し、動画URL等の文脈を使って固有名詞の誤認識、音声的に明らかなASR置換、誤重複、噛み・false startを修正します。Geminiが高確信度の固有名詞を直した場合だけ、その対応をユーザー辞書へ学習します。辞書候補自体はGeminiへ渡しません。</p>
+    </section>
+
+    <button id="save" class="primary">設定を保存</button>
+    <div id="saveStatus" class="message"></div>
+  </main>
+  <script src="hololive-dictionary.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

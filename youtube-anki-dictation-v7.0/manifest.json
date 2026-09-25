@@ -1,0 +1,84 @@
+{
+  "manifest_version": 3,
+  "name": "Video → Anki Dictation",
+  "version": "9.4.0",
+  "description": "YouTube/Netflix字幕をAnki化。Netflix字幕パネル時は映像を左上に最大フィットし、ウィンドウサイズ変更にも安定追従。Gemini語彙指令は編集可能。",
+  "minimum_chrome_version": "138",
+  "permissions": [
+    "activeTab",
+    "offscreen",
+    "scripting",
+    "storage",
+    "tabCapture",
+    "tabs",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://www.netflix.com/*",
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*",
+    "https://generativelanguage.googleapis.com/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Video → Anki Dictation",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "page-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.netflix.com/*"
+      ],
+      "js": [
+        "netflix-page-control.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.netflix.com/*"
+      ],
+      "js": [
+        "netflix-content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "save-capture": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+9",
+        "windows": "Ctrl+Shift+9"
+      },
+      "description": "字幕パネルを開いて現在位置へ移動"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  }
+}
